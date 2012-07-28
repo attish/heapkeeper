@@ -38,14 +38,17 @@ def get_user_icon(user, heap, size):
     url = ("http://www.gravatar.com/avatar/"
                        + hashlib.md5(email.lower()).hexdigest()
                        + "?")
+
+    # Please move these images to your own server and change the image URLs
+    # when deploying in a production environment!
     if user is None:
-        default = "http://www.veryicon.com/icon/png/System/Scrap/User.png"
+        default = "http://attish.github.com/images/anon.png"
     elif user.is_superuser:
-        default = "http://d3db.com/static/gameasset/quest/Portrait_Cain.png"
+        default = "http://attish.github.com/images/admin.png"
     elif heap.get_effective_userright(user) == 3:
-        default = "http://icons.iconarchive.com/icons/aha-soft/people/256/army-officer-icon.png"
+        default = "http://attish.github.com/images/heapadmin.png"
     else:
-        default= "http://www.clker.com/cliparts/b/1/f/a/1195445301811339265dagobert83_female_user_icon.svg.thumb.png"
+        default = "http://attish.github.com/images/user.png"
     url += urllib.urlencode({'s': str(size), 'd': default})
     return url
 
