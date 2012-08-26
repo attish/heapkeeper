@@ -200,6 +200,8 @@ def message_from_mail(mailfrom, rcpttos,
 
         label_target.add_label(labels)
 
+        msg.send_out_email()
+
 
 ##### "smtp" views
 

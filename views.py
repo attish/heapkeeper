@@ -469,6 +469,7 @@ def addconv_creator(variables):
             root_message=root_msg
         )
     conv.save()
+    root_msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Conversation started.'
     conv_url = reverse('hk.views.conversation', args=(conv.id,))
@@ -561,6 +562,7 @@ def addmessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Message added.'
     form = AddMessageForm()
@@ -831,6 +833,7 @@ def replymessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Message added.'
     form = ReplyMessageForm()

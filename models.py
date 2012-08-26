@@ -19,7 +19,10 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core import urlresolvers
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail 
+
 import datetime
+
 
 def get_or_make_label_obj(label):
     try:
@@ -80,6 +83,23 @@ class Message(models.Model):
         for field in kwargs:
             setattr(mv, field, kwargs[field])
         mv.save() 
+
+    def send_out_email(self):
+        heap = self.get_heap()
+        recipients = [user['email'] for user in heap.user_fields.values()]
+
+        print "Emails will be sent out to:"
+        for to in recipients:
+           print to
+
+        msg_subject = self.get_conversation().subject
+
+        # tags = 
+
+        body = self.latest_version().text
+
+        # TODO use a meaningful sender address!
+        send_mail(msg_subject, body, 'noreply@heapkeeper.com', recipients)
 
     def add_label(self, label_or_labels):
         if label_or_labels.__class__ in (str, unicode):
