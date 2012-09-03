@@ -17,9 +17,10 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import PermissionDenied
-from django.core.mail import send_mail 
+from django.core.mail import send_mail, make_msgid, EmailMessage
 
 import datetime
 
@@ -85,6 +86,18 @@ class Message(models.Model):
         mv.save() 
 
     def send_out_email(self):
+        msg_id = getattr(self, 'message_id', None)
+        if not msg_id:
+            msg_id = make_msgid()
+            self.message_id = msg_id
+            self.save()
+            print "New msgid '%s' added to %s." % (msg_id, self)
+
+        parent = self.latest_version().parent
+        parent_msg_id = None
+        if parent:
+            parent_msg_id = getattr(parent, 'message_id', None)
+
         heap = self.get_heap()
         recipients = [user['email'] for user in heap.user_fields.values()]
 
@@ -98,8 +111,27 @@ class Message(models.Model):
 
         body = self.latest_version().text
 
+        if hasattr(settings, 'HEAP_EMAIL_DOMAIN'):
+            reply_address = heap.short_name + '@' + settings.HEAP_EMAIL_DOMAIN
+        else:
+            reply_address = settings.EMAIL_HOST_USER
+
+        extra_headers = {'Reply-To': reply_address}
+        if msg_id:
+            extra_headers['Message-ID'] = msg_id
+        if parent_msg_id:
+            extra_headers['In-Reply-To'] = parent_msg_id
+
         # TODO use a meaningful sender address!
-        send_mail(msg_subject, body, 'noreply@heapkeeper.com', recipients)
+        mail = EmailMessage()
+
+        email = EmailMessage(msg_subject, body, 'noreply@heapkeeper.com',
+                    recipients, None,
+                    headers=extra_headers)
+        email.send()
+
+        # send_mail(msg_subject, body, 'noreply@heapkeeper.com', recipients,
+        #          headers=extra_headers)
 
     def add_label(self, label_or_labels):
         if label_or_labels.__class__ in (str, unicode):
