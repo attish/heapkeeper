@@ -86,6 +86,7 @@ class Message(models.Model):
         mv.save() 
 
     def send_out_email(self):
+        lv = self.latest_version()
         msg_id = getattr(self, 'message_id', None)
         if not msg_id:
             msg_id = make_msgid()
@@ -93,10 +94,13 @@ class Message(models.Model):
             self.save()
             print "New msgid '%s' added to %s." % (msg_id, self)
 
-        parent = self.latest_version().parent
+        parent = lv.parent
         parent_msg_id = None
         if parent:
             parent_msg_id = getattr(parent, 'message_id', None)
+        author_full_name = lv.author.get_full_name()
+        author_email = lv.author.email
+        author = "%s <%s>" % (author_full_name, author_email)
 
         heap = self.get_heap()
         recipients = [user['email'] for user in heap.user_fields.values()]
@@ -116,22 +120,18 @@ class Message(models.Model):
         else:
             reply_address = settings.EMAIL_HOST_USER
 
-        extra_headers = {'Reply-To': reply_address}
+        extra_headers = {'Reply-To': reply_address, 'From': author}
         if msg_id:
             extra_headers['Message-ID'] = msg_id
         if parent_msg_id:
             extra_headers['In-Reply-To'] = parent_msg_id
 
         # TODO use a meaningful sender address!
-        mail = EmailMessage()
-
-        email = EmailMessage(msg_subject, body, 'noreply@heapkeeper.com',
+        email = EmailMessage(msg_subject, body, settings.EMAIL_HOST_USER,
                     recipients, None,
                     headers=extra_headers)
         email.send()
 
-        # send_mail(msg_subject, body, 'noreply@heapkeeper.com', recipients,
-        #          headers=extra_headers)
 
     def add_label(self, label_or_labels):
         if label_or_labels.__class__ in (str, unicode):
