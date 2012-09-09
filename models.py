@@ -23,7 +23,9 @@ from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail, make_msgid, EmailMessage
 
 import datetime
+import multiprocessing
 
+lastchanged = {}
 
 def get_or_make_label_obj(label):
     try:
@@ -201,6 +203,17 @@ class MessageVersion(models.Model):
                 self.text[0:32],
             )
 
+    def save(self):
+        # This is nasty because sometimes this gets called in
+        # incomplete situations, that is, at times when 'fsck' would
+        # fail
+        try:
+            self.message.get_conversation().altered()
+        except AttributeError:
+            if self.parent:
+                self.parent.get_conversation().altered()
+        models.Model.save(self)
+
 
 class Heap(models.Model):
     HEAP_VISIBILITY_CHOICES = (
@@ -311,6 +324,15 @@ class Conversation(models.Model):
         for label_obj in label_objs:
             self.labels.add(label_obj)
         self.save()
+
+    def save(self):
+        self.altered()
+        models.Model.save(self)
+
+    def altered(self):
+        print "%s altered." % self
+        lastchanged[self] = datetime.datetime.now()
+
 
 class HkException(Exception):
     """A very simple exception class used."""
