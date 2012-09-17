@@ -212,6 +212,10 @@ class MessageVersion(models.Model):
         except AttributeError:
             if self.parent:
                 self.parent.get_conversation().altered()
+        except Conversation.DoesNotExist:
+			# TODO Ignore for now. Later the user will have to be
+			# dropped back to the heap index when this happens.
+            pass
         models.Model.save(self)
 
 
@@ -330,7 +334,7 @@ class Conversation(models.Model):
         models.Model.save(self)
 
     def altered(self):
-        print "%s altered." % self
+        # print "%s altered." % self
         lastchanged[self] = datetime.datetime.now()
 
 
