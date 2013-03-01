@@ -18,7 +18,7 @@
     </script>
     {{ conv.subject }}
     {% if add_controls %}
-    <a class="editsubject" href="{% url hk.views.editsubject conv.id %}">
+    <a class="editsubject" href="{% url "hk.views.editsubject" conv.id %}">
         edit
     </a>
     {% endif %}

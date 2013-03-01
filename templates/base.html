@@ -3,7 +3,7 @@
         <title>
             Heapkeeper - {% block title %}{% endblock %}
         </title>
-        <script type="text/javascript" src="/media/js/jquery.min.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/javascript"></script>
         <style>
             /* These affect every page. */
             body
@@ -174,12 +174,12 @@
             </div>
             <div class="topbar-right">
                 {% if user.is_authenticated %}
-                    {{ user.username }} | <a href="{% url logout %}">Log out</a>
+                    {{ user.username }} | <a href="{% url "logout" %}">Log out</a>
                 {% else %}
                 <div class="toplinks">
-                    <a href="{% url login %}">Log in</a>
+                    <a href="{% url "login" %}">Log in</a>
                     &nbsp; &nbsp; &nbsp;
-                    <a href="{% url register %}">Register</a>
+                    <a href="{% url "register" %}">Register</a>
                 </div>
                 {% endif %}
             </div>

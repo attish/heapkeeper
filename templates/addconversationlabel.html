@@ -5,5 +5,5 @@
 {% block header %}
     Add label to conversation
 {% endblock %}
-{% block action %}{% url hk.views.addconversationlabel obj_id %}{% endblock %}
+{% block action %}{% url "hk.views.addconversationlabel" obj_id %}{% endblock %}
 {% block submittext%}Add label{% endblock %}

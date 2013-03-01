@@ -15,9 +15,9 @@
 {% if not user.is_authenticated %}
 
 <ul>
-  <li><a href="{% url login %}" >Log in</a></li>
-  <li><a href="{% url register %}" >Register</a></li>
-  <li><a href="{% url password_reset %}" >I forgot my password</a></li>
+  <li><a href="{% url "login" %}" >Log in</a></li>
+  <li><a href="{% url "register" %}" >Register</a></li>
+  <li><a href="{% url "password_reset" %}" >I forgot my password</a></li>
 </ul>
 
 <!-- Interface for logged in users -->
@@ -35,7 +35,7 @@ Welcome, {{ username }}!
     <!-- Listing heaps -->
     {% for heap in heaps %}
         <li>
-            <a href="{% url hk.views.heap heap.id %}">
+            <a href="{% url "hk.views.heap" heap.id %}">
                 {{ heap.long_name }}
             </a>
         </li>
@@ -44,15 +44,15 @@ Welcome, {{ username }}!
 </p>
 {% if user.is_authenticated %}
 <p>
-  <a href="{% url addheap %}">Create new heap</a><br \>
-  <a href="{% url addconv %}">Create new conversation</a>
+  <a href="{% url "addheap" %}">Create new heap</a><br \>
+  <a href="{% url "addconv" %}">Create new conversation</a>
 </p>
 {% endif %}
 {% if user.is_authenticated %}
 My user
 <ul>
-  <li><a href="{% url password_change %}">Change password</a></li>
-  <li><a href="{% url logout %}">Log out</a></li>
+  <li><a href="{% url "password_change" %}">Change password</a></li>
+  <li><a href="{% url "logout" %}">Log out</a></li>
 </ul>
 {% endif %}
 
