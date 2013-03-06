@@ -773,6 +773,9 @@ def editmessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    # Reset memoized parent
+    # TODO: could be updated right in the memoize cache
+    msg.latest_version.reset()
     mv.labels = curr_labels
     mv.save()
     # Joining conversations
