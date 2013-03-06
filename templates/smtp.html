@@ -8,10 +8,10 @@
 {% block body %}
     {% if running %}
         SMTP server is up and running.
-        <a href="{% url hk.views.disable_smtp %}">Stop SMTP server</a>
+        <a href="{% "url hk.views.disable_smtp" %}">Stop SMTP server</a>
     {% else %}
         SMTP server is down.
-        <a href="{% url hk.views.enable_smtp %}">Start SMTP server</a>
+        <a href="{% url "hk.views.enable_smtp" %}">Start SMTP server</a>
     {% endif %}
 {% endblock %}
 

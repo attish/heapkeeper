@@ -17,9 +17,16 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail, make_msgid, EmailMessage
+
 import datetime
+import functools
+import multiprocessing
+
+lastchanged = {}
 
 def get_or_make_label_obj(label):
     try:
@@ -29,6 +36,37 @@ def get_or_make_label_obj(label):
         label_obj.save()
     return label_obj
         
+# Credits to http://stackoverflow.com/questions/4431703
+class memoized(object):
+   """Decorator that caches a function's return value each time it is
+   called.  If called later with the same arguments, the cached value
+   is returned, and not re-evaluated.
+   """
+   def __init__(self, func):
+      self.func = func
+      self.cache = {}
+   def __call__(self, *args):
+      try:
+         return self.cache[args]
+      except KeyError:
+         value = self.func(*args)
+         self.cache[args] = value
+         return value
+      except TypeError:
+         # uncachable -- for instance, passing a list as an argument.
+         # Better to not cache than to blow up entirely.
+         return self.func(*args)
+   def __repr__(self):
+      """Return the function's docstring."""
+      return self.func.__doc__
+   def __get__(self, obj, objtype):
+      """Support instance methods."""
+      fn = functools.partial(self.__call__, obj)
+      fn.reset = self._reset
+      return fn
+   def _reset(self):
+      self.cache.pop(self, None)
+
 
 class Message(models.Model):
     users_have_read = models.ManyToManyField(User, null=True, blank=True)
@@ -39,7 +77,9 @@ class Message(models.Model):
                 self.id,
             )
 
+    @memoized
     def latest_version(self):
+        # This is a performance-critical function and it is cached.
         version_list = list(MessageVersion.objects.filter(message=self))
         version_list.sort(key=lambda l: l.version_date)
         if len(version_list) == 0:
@@ -80,6 +120,54 @@ class Message(models.Model):
         for field in kwargs:
             setattr(mv, field, kwargs[field])
         mv.save() 
+
+    def send_out_email(self):
+        lv = self.latest_version()
+        msg_id = getattr(self, 'message_id', None)
+        if not msg_id:
+            msg_id = make_msgid()
+            self.message_id = msg_id
+            self.save()
+            print "New msgid '%s' added to %s." % (msg_id, self)
+
+        parent = lv.parent
+        parent_msg_id = None
+        if parent:
+            parent_msg_id = getattr(parent, 'message_id', None)
+        author_full_name = lv.author.get_full_name()
+        author_email = lv.author.email
+        author = "%s <%s>" % (author_full_name, author_email)
+
+        heap = self.get_heap()
+        recipients = [user['email'] for user in heap.user_fields.values()]
+
+        print "Emails will be sent out to:"
+        for to in recipients:
+           print to
+
+        msg_subject = self.get_conversation().subject
+
+        # tags = 
+
+        body = self.latest_version().text
+
+        if hasattr(settings, 'HEAP_EMAIL_DOMAIN'):
+            reply_address = heap.short_name + '@' + settings.HEAP_EMAIL_DOMAIN
+        else:
+            reply_address = settings.EMAIL_HOST_USER
+
+        extra_headers = {'Reply-To': reply_address, 'From': author}
+        if msg_id:
+            extra_headers['Message-ID'] = msg_id
+        if parent_msg_id:
+            extra_headers['In-Reply-To'] = parent_msg_id
+
+        # TODO use a meaningful sender address!
+        email = EmailMessage(msg_subject, body, settings.EMAIL_HOST_USER,
+                    recipients, None,
+                    headers=extra_headers)
+        email.send()
+
 
     def add_label(self, label_or_labels):
         if label_or_labels.__class__ in (str, unicode):
@@ -148,6 +236,17 @@ class MessageVersion(models.Model):
                 labels or '<none>',
                 self.text[0:32],
             )
+
+    def save(self):
+        # This is nasty because sometimes this gets called in
+        # incomplete situations, that is, at times when 'fsck' would
+        # fail
+        try:
+            self.message.get_conversation().altered()
+        except AttributeError:
+            if self.parent:
+                self.parent.get_conversation().altered()
+        models.Model.save(self)
 
 
 class Heap(models.Model):
@@ -259,6 +358,15 @@ class Conversation(models.Model):
         for label_obj in label_objs:
             self.labels.add(label_obj)
         self.save()
+
+    def save(self):
+        self.altered()
+        models.Model.save(self)
+
+    def altered(self):
+        print "%s altered." % self
+        lastchanged[self] = datetime.datetime.now()
+
 
 class HkException(Exception):
     """A very simple exception class used."""

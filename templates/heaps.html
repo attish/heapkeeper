@@ -9,13 +9,13 @@
         <ul>
         {% for heap in heaps %}
             <li>
-                <a href="{% url hk.views.heap heap.id %}">
+                <a href="{% url "hk.views.heap" heap.id %}">
                     {{ heap.long_name }}
                 </a>
             </li>
         {% endfor %}
         </ul>
-        <a href="{% url hk.views.addheap %}">
+        <a href="{% url "hk.views.addheap" %}">
             Add new heap
         </a>
 {% endblock %}

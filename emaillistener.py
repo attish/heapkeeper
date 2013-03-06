@@ -26,6 +26,8 @@ import re
 import smtpd
 import time
 import multiprocessing
+import urllib
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
@@ -36,6 +38,7 @@ from hk.models import *
 ##### SMTP server to receive mail
 
 email_thread = None
+local_lastchanged = None
 
 def normalize_str(s):
     s = re.sub(r'\r\n', r'\n', s) # Windows EOL
@@ -82,8 +85,10 @@ class FakeSMTPServer(smtpd.DebuggingServer):
                           text)
 
 
-def server_thread(port=25):
+def server_thread(port=25, lastchanged=None):
+    global local_lastchanged
     smtp_server = FakeSMTPServer(('0.0.0.0', port), None)
+    local_lastchanged = lastchanged
     asyncore.loop()
 
 def run_server_thread(port):
@@ -91,8 +96,9 @@ def run_server_thread(port):
     if email_thread is not None and email_thread.is_alive():
         print "STMP thread already running!"
         return
+    
     email_thread = multiprocessing.Process(target=server_thread,
-                                           args=(int(port),))
+                                           args=(int(port), lastchanged))
     email_thread.start()
     print "STMP thread started."
 
@@ -199,6 +205,13 @@ def message_from_mail(mailfrom, rcpttos,
             label_target = msg
 
         label_target.add_label(labels)
+
+        if settings.HK_HTTP_PORT:
+            conv_id = msg.get_conversation().id
+            urllib.urlopen('http://localhost:%d/touch_conv/%d/'
+                                % (settings.HK_HTTP_PORT, conv_id)).readlines()
+
+        msg.send_out_email()
 
 
 ##### "smtp" views

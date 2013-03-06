@@ -3,9 +3,22 @@
     {{ conv.subject }}
 {% endblock %}
 {% block header %}
+    <script type="text/javascript">
+    $(document).ready(function($) {
+        $.ajax({
+            url: '/wait_for_conv_update/' + {{ conv.id }} + '/'
+                    + Math.round(Math.random()*1000000),
+            type: 'get',
+            success: function() {
+                    location.reload(true);
+                }
+        });
+    });
+
+    </script>
     {{ conv.subject }}
     {% if add_controls %}
-    <a class="editsubject" href="{% url hk.views.editsubject conv.id %}">
+    <a class="editsubject" href="{% url "hk.views.editsubject" conv.id %}">
         edit
     </a>
     {% endif %}

@@ -5,5 +5,5 @@
 {% block header %}
     Delete message
 {% endblock %}
-{% block action %}{% url hk.views.delmessage message.id %}{% endblock %}
+{% block action %}{% url "hk.views.delmessage" message.id %}{% endblock %}
 {% block submittext%}Delete message{% endblock %}

@@ -30,6 +30,7 @@ from emaillistener import smtp, enable_smtp, disable_smtp
 import django.db
 from hk.models import *
 import datetime
+import time
 import urllib, hashlib
 
 ##### Helper functions 
@@ -156,6 +157,25 @@ def testgetmsg(request, msg_id):
             'testgetmsg.html',
             {'msgv': latest_version}
         )
+
+def wait_for_conv_update(request, conv_id):
+    conv = Conversation.objects.get(pk=conv_id)
+    start = datetime.datetime.now()
+    poll_id = str(start.minute) + str(start.second)
+    # print "Longpoll #%s started." % poll_id
+    while True:
+        time.sleep(3)
+        age = start - lastchanged.get(conv, datetime.datetime(1970,1,1))
+        # print  "Longpoll %s: changed %d seconds ago." % (poll_id, age.total_seconds())
+        # print "main id: %s" % id(lastchanged)
+        # print "lastchanged in longpoll %s: %s" % (poll_id, lastchanged)
+        if lastchanged.get(conv, datetime.datetime(1970,1,1)) > start:
+            return HttpResponse('ok')
+
+def touch_conv(request, conv_id):
+    conv = Conversation.objects.get(pk=conv_id)
+    lastchanged[conv] = datetime.datetime.now()
+    return HttpResponse('ok')
 
 def conversation(request, conv_id):
     conv = get_object_or_404(Conversation, pk=conv_id)
@@ -472,6 +492,7 @@ def addconv_creator(variables):
             root_message=root_msg
         )
     conv.save()
+    root_msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Conversation started.'
     conv_url = reverse('hk.views.conversation', args=(conv.id,))
@@ -564,6 +585,7 @@ def addmessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Message added.'
     form = AddMessageForm()
@@ -754,6 +776,9 @@ def editmessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    # Reset memoized parent
+    # TODO: could be updated right in the memoize cache
+    msg.latest_version.reset()
     mv.labels = curr_labels
     mv.save()
     # Joining conversations
@@ -834,6 +859,7 @@ def replymessage_creator(variables):
             text=form.cleaned_data['text']
         )
     mv.save()
+    msg.send_out_email()
     variables['form'] = variables['form_class']()
     variables['error_message'] = 'Message added.'
     form = ReplyMessageForm()
